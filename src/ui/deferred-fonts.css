@@ -1,0 +1,6 @@
+/* Fonts that style already-painted text. Loaded lazily from src/main.tsx
+   after the first frame so their downloads never compete with (or gate) the
+   boot-critical path. Keep font-display: swap semantics from the package:
+   text renders with the fallback stack and upgrades when the font is
+   ready. */
+@import "@fontsource-variable/jetbrains-mono";
