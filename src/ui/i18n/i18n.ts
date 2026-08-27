@@ -140,13 +140,12 @@ i18n
 
 // Pull in the rest of the English catalog once boot is out of the way: it is
 // the fallback language, so keys outside the boot subset must resolve by the
-// time an authenticated surface renders. Deferred to idle time so the fetch
-// does not compete with the boot-critical downloads.
+// time an authenticated surface renders. A flat delay (rather than an idle
+// callback) is deliberate: the main thread idles while the boot requests are
+// in flight, so an idle callback would start this download before the first
+// meaningful paint and put it back on the critical path.
 if (typeof window !== "undefined") {
-  const scheduleIdle =
-    window.requestIdleCallback ??
-    ((callback: () => void) => window.setTimeout(callback, 1500));
-  scheduleIdle(() => void ensureFullEnglishCatalog());
+  window.setTimeout(() => void ensureFullEnglishCatalog(), 1500);
 } else {
   void ensureFullEnglishCatalog();
 }
