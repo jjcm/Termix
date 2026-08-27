@@ -51,7 +51,10 @@ import { registerUserOidcAccountRoutes } from "./user-oidc-account-routes.js";
 import { registerUserPasswordResetRoutes } from "./user-password-reset-routes.js";
 import { registerUserAdminRoutes } from "./user-admin-routes.js";
 import { registerUserDataAccessRoutes } from "./user-data-access-routes.js";
-import { registerSSOProviderRoutes } from "./sso-provider-routes.js";
+import {
+  registerSSOProviderRoutes,
+  listEnabledPublicSsoProviders,
+} from "./sso-provider-routes.js";
 import { registerLDAPAuthRoutes } from "./ldap-auth-routes.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 import { notifyAutomationInternalEvent } from "../../hosts/metrics/automation-bridge.js";
@@ -2218,6 +2221,51 @@ router.get("/setup-required", async (req, res) => {
   } catch (err) {
     authLogger.error("Failed to check setup status", err);
     res.status(500).json({ error: "Failed to check setup status" });
+  }
+});
+
+/**
+ * @openapi
+ * /users/login-config:
+ *   get:
+ *     summary: Aggregated public login-page configuration
+ *     description: Returns everything the signed-out login page needs in one round trip - setup status, registration/password toggles, SSO providers and the OIDC silent-login default. Equivalent to calling the six individual public endpoints; exists so the login page can boot on a single request instead of six.
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: Aggregated login-page configuration.
+ *       500:
+ *         description: Failed to load login configuration.
+ */
+router.get("/login-config", async (_req, res) => {
+  try {
+    const oidcSilentEnv = getOidcSilentLoginDefaultFromEnv();
+    const [userCount, ssoProviders, oidcSilentEnabled] = await Promise.all([
+      createCurrentUserRepository().countAll(),
+      listEnabledPublicSsoProviders(),
+      oidcSilentEnv !== undefined
+        ? Promise.resolve(oidcSilentEnv)
+        : createCurrentSettingsRepository().getBoolean(
+            "oidc_silent_login_default",
+            false,
+          ),
+    ]);
+
+    res.json({
+      setup_required: userCount === 0,
+      registration_allowed: isRegistrationAllowed(),
+      password_login_allowed: isPasswordLoginAllowed(),
+      password_reset_allowed: isPasswordResetAllowed(),
+      oidc_silent_login_default: {
+        enabled: oidcSilentEnabled,
+        locked: oidcSilentEnv !== undefined,
+      },
+      sso_providers: ssoProviders,
+    });
+  } catch (err) {
+    authLogger.error("Failed to load login configuration", err);
+    res.status(500).json({ error: "Failed to load login configuration" });
   }
 });
 

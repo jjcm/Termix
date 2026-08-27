@@ -438,4 +438,15 @@ prepareClientCacheVersion().finally(() => {
       </ThemeProvider>
     </StrictMode>,
   );
+
+  // Load the UI font once the boot work has settled: fetched any earlier it
+  // sits on the first-paint critical path and delays LCP on slow
+  // connections. Text renders with the fallback stack and swaps when ready.
+  // A flat delay (rather than an idle callback) is deliberate: the main
+  // thread is idle while the boot requests are in flight, so an idle
+  // callback would start the font download before the first meaningful
+  // paint.
+  window.setTimeout(() => {
+    void import("./ui/deferred-fonts.css");
+  }, 1500);
 });

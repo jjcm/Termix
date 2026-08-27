@@ -1,6 +1,10 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "@fontsource-variable/jetbrains-mono";
+/* The UI font ("JetBrains Mono Variable") is intentionally NOT imported
+   here: this stylesheet is render-blocking, and any font fetched before
+   first paint sits on the LCP critical path. src/main.tsx injects
+   deferred-fonts.css right after the first frame instead; text paints
+   immediately with the fallback stack and swaps when the font arrives. */
 @import "@fontsource/jetbrains-mono/400.css";
 @import "@fontsource/jetbrains-mono/400-italic.css";
 @import "@fontsource/jetbrains-mono/700.css";

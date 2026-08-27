@@ -1,4 +1,5 @@
 import { authApi, handleApiError, type UserInfo } from "@/main-axios";
+import { consumeLoginConfigField } from "@/lib/boot-prefetch";
 import { getConnectedRemoteApi } from "@/lib/remote-server-api";
 
 // USER MANAGEMENT
@@ -259,6 +260,14 @@ export async function getOidcSilentLoginDefault(): Promise<{
   enabled: boolean;
   locked?: boolean;
 }> {
+  const prefetched = consumeLoginConfigField("oidc_silent_login_default");
+  if (prefetched) {
+    try {
+      return await prefetched;
+    } catch {
+      // Fall through to a regular request.
+    }
+  }
   try {
     const response = await authApi.get("/users/oidc-silent-login-default");
     return response.data;
@@ -294,6 +303,14 @@ export async function updatePasswordLoginAllowed(
 }
 
 export async function getPasswordResetAllowed(): Promise<boolean> {
+  const prefetched = consumeLoginConfigField("password_reset_allowed");
+  if (prefetched) {
+    try {
+      return await prefetched;
+    } catch {
+      // Fall through to a regular request.
+    }
+  }
   try {
     const response = await authApi.get("/users/password-reset-allowed");
     return response.data.allowed;

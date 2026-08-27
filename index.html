@@ -70,6 +70,26 @@
   <body>
     <script>
       window.__TERMIX_BASE_PATH__ = "";
+      // Start the signed-out login-config request while the app bundle is
+      // still downloading, instead of serially after React mounts. One
+      // aggregated request on purpose: parallel per-endpoint fetches here
+      // would compete with the boot-critical downloads for HTTP/1.1
+      // connections. Consumed one-shot by src/ui/lib/boot-prefetch.ts; any
+      // failure falls back to the normal per-endpoint API calls.
+      window.__TERMIX_LOGIN_CONFIG__ = (function () {
+        if (location.protocol !== "http:" && location.protocol !== "https:") {
+          return null;
+        }
+        var promise = fetch(
+          (window.__TERMIX_BASE_PATH__ || "") + "/users/login-config",
+          { headers: { Accept: "application/json" } },
+        ).then(function (response) {
+          if (!response.ok) throw new Error(String(response.status));
+          return response.json();
+        });
+        promise.catch(function () {});
+        return promise;
+      })();
     </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>

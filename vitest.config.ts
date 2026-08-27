@@ -1,7 +1,9 @@
 import path from "path";
 import { defineConfig } from "vitest/config";
+import { bootLocalePlugin } from "./scripts/vite-plugin-boot-locale";
 
 export default defineConfig({
+  plugins: [bootLocalePlugin()],
   resolve: {
     alias: {
       "@/types": path.resolve(__dirname, "./src/types"),

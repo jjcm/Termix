@@ -94,6 +94,31 @@ function applyProviderDefaults(
   return config;
 }
 
+/**
+ * Public info for all enabled SSO providers, as shown on the login page.
+ * Shared between GET /users/sso-providers and the aggregated
+ * GET /users/login-config boot endpoint.
+ */
+export async function listEnabledPublicSsoProviders(): Promise<
+  Array<{ id: number; name: string; type: string; displayOrder: number }>
+> {
+  const envConfig = getOIDCConfigFromEnv();
+  if (envConfig && isOIDCEnvOverrideEnabled()) {
+    return [{ id: 0, name: "SSO", type: "oidc", displayOrder: 0 }];
+  }
+
+  const providers =
+    await createCurrentSsoProviderRepository().listEnabledPublic();
+
+  // If no DB providers exist, synthesize one from env vars so SSO login
+  // remains available when configured purely via environment variables.
+  if (providers.length === 0 && envConfig) {
+    providers.push({ id: 0, name: "SSO", type: "oidc", displayOrder: 0 });
+  }
+
+  return providers;
+}
+
 export function registerSSOProviderRoutes(router: Router): void {
   const requireAdmin = authManager.createAdminMiddleware();
 
@@ -111,25 +136,7 @@ export function registerSSOProviderRoutes(router: Router): void {
    */
   router.get("/sso-providers", async (_req, res) => {
     try {
-      const envConfig = getOIDCConfigFromEnv();
-      if (envConfig && isOIDCEnvOverrideEnabled()) {
-        return res.json([
-          { id: 0, name: "SSO", type: "oidc", displayOrder: 0 },
-        ]);
-      }
-
-      const providers =
-        await createCurrentSsoProviderRepository().listEnabledPublic();
-
-      // If no DB providers exist, synthesize one from env vars so SSO login
-      // remains available when configured purely via environment variables.
-      if (providers.length === 0) {
-        if (envConfig) {
-          providers.push({ id: 0, name: "SSO", type: "oidc", displayOrder: 0 });
-        }
-      }
-
-      res.json(providers);
+      res.json(await listEnabledPublicSsoProviders());
     } catch (err) {
       authLogger.error("Failed to list SSO providers", err);
       res.status(500).json({ error: "Failed to list SSO providers" });

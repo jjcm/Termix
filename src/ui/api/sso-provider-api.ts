@@ -1,7 +1,16 @@
 import { authApi, handleApiError } from "@/main-axios";
+import { consumeLoginConfigField } from "@/lib/boot-prefetch";
 import type { SSOProvider, SSOProviderPublic } from "@/types/index";
 
 export async function getSSOProviders(): Promise<SSOProviderPublic[]> {
+  const prefetched = consumeLoginConfigField("sso_providers");
+  if (prefetched) {
+    try {
+      return (await prefetched) as SSOProviderPublic[];
+    } catch {
+      // Fall through to a regular request.
+    }
+  }
   try {
     const response = await authApi.get("/users/sso-providers");
     return response.data;
