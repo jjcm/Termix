@@ -4,6 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import svgr from "vite-plugin-svgr";
+import { bootLocalePlugin } from "./scripts/vite-plugin-boot-locale";
 
 const sslCertPath = path.join(process.cwd(), "ssl/termix.crt");
 const sslKeyPath = path.join(process.cwd(), "ssl/termix.key");
@@ -74,7 +75,7 @@ function getManualChunk(id: string): string | undefined {
 }
 
 export default defineConfig({
-  plugins: [react(), tailwindcss(), svgr()],
+  plugins: [react(), tailwindcss(), svgr(), bootLocalePlugin()],
   define: {
     "import.meta.env.VITE_APP_VERSION": JSON.stringify(
       packageJson.version || "0.0.0",

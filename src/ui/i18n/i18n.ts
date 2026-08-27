@@ -2,9 +2,26 @@ import i18n, { type BackendModule, type ResourceKey } from "i18next";
 import { initReactI18next } from "react-i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
 
-import enTranslation from "../locales/en.json";
+// Boot-critical subset of the English catalog (login/registration, toasts,
+// shared errors) served by scripts/vite-plugin-boot-locale.ts. The full
+// catalog is ~25x bigger and is merged in lazily right after boot so the
+// entry bundle does not carry translations for surfaces that only exist
+// behind authentication.
+import enBootTranslation from "virtual:termix-boot-locale";
 
 type LocaleModule = { default: ResourceKey };
+
+const loadFullEnglishCatalog = () => import("../locales/en.json");
+
+let fullEnglishCatalogPromise: Promise<ResourceKey> | null = null;
+function ensureFullEnglishCatalog(): Promise<ResourceKey> {
+  fullEnglishCatalogPromise ??= loadFullEnglishCatalog().then((module) => {
+    const catalog = module.default as ResourceKey;
+    i18n.addResourceBundle("en", "translation", catalog, true, false);
+    return catalog;
+  });
+  return fullEnglishCatalogPromise;
+}
 
 const localeLoaders = {
   af: () => import("../locales/translated/af_ZA.json"),
@@ -67,20 +84,25 @@ const localeBackend: BackendModule = {
   read: (language, _namespace, callback) => {
     const normalizedLanguage = normalizeLanguageCode(language);
 
-    if (normalizedLanguage === "en") {
-      callback(null, enTranslation);
-      return;
-    }
+    const loadLocale =
+      normalizedLanguage === "en"
+        ? undefined
+        : localeLoaders[normalizedLanguage];
 
-    const loadLocale = localeLoaders[normalizedLanguage];
     if (!loadLocale) {
-      callback(null, enTranslation);
+      ensureFullEnglishCatalog()
+        .then((catalog) => callback(null, catalog))
+        .catch(() => callback(null, enBootTranslation));
       return;
     }
 
     loadLocale()
       .then((module) => callback(null, module.default))
-      .catch(() => callback(null, enTranslation));
+      .catch(() =>
+        ensureFullEnglishCatalog()
+          .then((catalog) => callback(null, catalog))
+          .catch(() => callback(null, enBootTranslation)),
+      );
   },
 };
 
@@ -102,7 +124,7 @@ i18n
 
     resources: {
       en: {
-        translation: enTranslation,
+        translation: enBootTranslation,
       },
     },
     partialBundledLanguages: true,
@@ -115,6 +137,19 @@ i18n
       useSuspense: false,
     },
   });
+
+// Pull in the rest of the English catalog once boot is out of the way: it is
+// the fallback language, so keys outside the boot subset must resolve by the
+// time an authenticated surface renders. Deferred to idle time so the fetch
+// does not compete with the boot-critical downloads.
+if (typeof window !== "undefined") {
+  const scheduleIdle =
+    window.requestIdleCallback ??
+    ((callback: () => void) => window.setTimeout(callback, 1500));
+  scheduleIdle(() => void ensureFullEnglishCatalog());
+} else {
+  void ensureFullEnglishCatalog();
+}
 
 export async function changeAppLanguage(language: string): Promise<string> {
   const normalizedLanguage = normalizeLanguageCode(language);
