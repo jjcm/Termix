@@ -46,38 +46,13 @@ const manualChunkGroups: Record<string, string[]> = {
     "tailwind-merge",
     "class-variance-authority",
   ],
-  monaco: ["@monaco-editor/react", "monaco-editor"],
-  "terminal-vendor": [
-    "@xterm/addon-clipboard",
-    "@xterm/addon-fit",
-    "@xterm/addon-unicode11",
-    "@xterm/addon-web-links",
-    "@xterm/xterm",
-    "react-xtermjs",
-  ],
-  codemirror: [
-    "@uiw/react-codemirror",
-    "@codemirror/view",
-    "@codemirror/state",
-    "@codemirror/language",
-    "@codemirror/commands",
-    "@codemirror/search",
-    "@codemirror/autocomplete",
-    "@codemirror/theme-one-dark",
-    "@uiw/codemirror-extensions-langs",
-    "@uiw/codemirror-theme-github",
-  ],
-  "remote-desktop-vendor": ["guacamole-common-js"],
-  "graph-vendor": ["cytoscape", "react-cytoscapejs"],
-  "file-preview-vendor": [
-    "react-pdf",
-    "pdfjs-dist",
-    "react-photo-view",
-    "react-h5-audio-player",
-    "react-markdown",
-    "react-syntax-highlighter",
-    "remark-gfm",
-  ],
+  // NOTE: lazy-only vendors (codemirror, monaco, xterm, guacamole, cytoscape,
+  // pdf/markdown preview libraries) are deliberately NOT pinned here. Pinning
+  // them made the bundler hoist shared boot-needed modules (even React itself)
+  // into those vendor chunks, which dragged up to ~970KB (compressed) of
+  // editor/preview code onto the boot critical path even though every
+  // consumer of those libraries is behind a dynamic import. Left unpinned,
+  // they land in the lazy chunks that actually import them.
 };
 
 function getManualChunk(id: string): string | undefined {
