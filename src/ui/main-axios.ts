@@ -7,6 +7,7 @@ import axios, {
 } from "axios";
 import { toast } from "sonner";
 import { getBasePath } from "@/lib/base-path";
+import { consumeLoginConfigField } from "@/lib/boot-prefetch";
 import { isElectron } from "@/lib/electron";
 import { clearTermixSessionStorage } from "@/shell/TabContext";
 import type { SSHHost } from "@/types/index";
@@ -1827,6 +1828,14 @@ export async function unlockUserData(
 }
 
 export async function getRegistrationAllowed(): Promise<{ allowed: boolean }> {
+  const prefetched = consumeLoginConfigField("registration_allowed");
+  if (prefetched) {
+    try {
+      return { allowed: await prefetched };
+    } catch {
+      // Fall through to a regular request.
+    }
+  }
   try {
     const response = await authApi.get("/users/registration-allowed");
     return response.data;
@@ -1836,6 +1845,14 @@ export async function getRegistrationAllowed(): Promise<{ allowed: boolean }> {
 }
 
 export async function getPasswordLoginAllowed(): Promise<{ allowed: boolean }> {
+  const prefetched = consumeLoginConfigField("password_login_allowed");
+  if (prefetched) {
+    try {
+      return { allowed: await prefetched };
+    } catch {
+      // Fall through to a regular request.
+    }
+  }
   try {
     const response = await authApi.get("/users/password-login-allowed");
     return response.data;
@@ -1868,6 +1885,14 @@ export async function getAdminOIDCConfig(): Promise<Record<string, unknown>> {
 }
 
 export async function getSetupRequired(): Promise<{ setup_required: boolean }> {
+  const prefetched = consumeLoginConfigField("setup_required");
+  if (prefetched) {
+    try {
+      return { setup_required: await prefetched };
+    } catch {
+      // Fall through to a regular request.
+    }
+  }
   try {
     const response = await authApi.get("/users/setup-required");
     return response.data;
